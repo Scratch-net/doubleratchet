@@ -2,27 +2,27 @@ package doubleratchet
 
 import (
 	"github.com/pkg/errors"
-	curve255192 "golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/curve25519"
 )
 
 func X3DHInit(identityPrivate, ephPrivate, recieverIdentityPublic, recieverLongTermPublic, recieverOneTimePublic []byte) ([]byte, error) {
 	sharedSecret := make([]byte, 0, 32*4)
-	res, err := curve25519(recieverLongTermPublic, identityPrivate)
+	res, err := calcSharedSecret(recieverLongTermPublic, identityPrivate)
 	if err != nil {
 		return nil, err
 	}
 	sharedSecret = append(sharedSecret, res...)
-	res, err = curve25519(recieverIdentityPublic, ephPrivate)
+	res, err = calcSharedSecret(recieverIdentityPublic, ephPrivate)
 	if err != nil {
 		return nil, err
 	}
 	sharedSecret = append(sharedSecret, res...)
-	res, err = curve25519(recieverLongTermPublic, ephPrivate)
+	res, err = calcSharedSecret(recieverLongTermPublic, ephPrivate)
 	if err != nil {
 		return nil, err
 	}
 	sharedSecret = append(sharedSecret, res...)
-	res, err = curve25519(recieverOneTimePublic, ephPrivate)
+	res, err = calcSharedSecret(recieverOneTimePublic, ephPrivate)
 	if err == nil {
 		sharedSecret = append(sharedSecret, res...)
 	}
@@ -32,29 +32,29 @@ func X3DHInit(identityPrivate, ephPrivate, recieverIdentityPublic, recieverLongT
 
 func X3DHRespond(senderIdentityPublic, senderEphemeralPublic, receiverIdentityPrivate, receiverLogTermPrivate, receiverOneTimePrivate []byte) ([]byte, error) {
 	sharedSecret := make([]byte, 0, 32*4)
-	res, err := curve25519(senderIdentityPublic, receiverLogTermPrivate)
+	res, err := calcSharedSecret(senderIdentityPublic, receiverLogTermPrivate)
 	if err != nil {
 		return nil, err
 	}
 	sharedSecret = append(sharedSecret, res...)
-	res, err = curve25519(senderEphemeralPublic, receiverIdentityPrivate)
+	res, err = calcSharedSecret(senderEphemeralPublic, receiverIdentityPrivate)
 	if err != nil {
 		return nil, err
 	}
 	sharedSecret = append(sharedSecret, res...)
-	res, err = curve25519(senderEphemeralPublic, receiverLogTermPrivate)
+	res, err = calcSharedSecret(senderEphemeralPublic, receiverLogTermPrivate)
 	if err != nil {
 		return nil, err
 	}
 	sharedSecret = append(sharedSecret, res...)
-	res, err = curve25519(senderEphemeralPublic, receiverOneTimePrivate)
+	res, err = calcSharedSecret(senderEphemeralPublic, receiverOneTimePrivate)
 	if err == nil {
 		sharedSecret = append(sharedSecret, res...)
 	}
 	return sharedSecret, nil
 }
 
-func curve25519(public, private []byte) ([]byte, error) {
+func calcSharedSecret(public, private []byte) ([]byte, error) {
 	if len(public) != 32 || len(private) != 32 {
 		return nil, errors.New("key size is invalid")
 	}
@@ -63,6 +63,6 @@ func curve25519(public, private []byte) ([]byte, error) {
 	copy(pk[:], public)
 	copy(sk[:], private)
 
-	curve255192.ScalarMult(&sharedKey, &sk, &pk)
+	curve25519.ScalarMult(&sharedKey, &sk, &pk)
 	return sharedKey[:], nil
 }
